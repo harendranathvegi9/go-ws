@@ -23,10 +23,10 @@ var (
 )
 
 func (e *Event) Text() (string, error) {
-	bts, err := e.Bytes()
+	bts, err := e.Data()
 	return string(bts), err
 }
-func (e *Event) Bytes() ([]byte, error) {
+func (e *Event) Data() ([]byte, error) {
 	return ioutil.ReadAll(e)
 }
 

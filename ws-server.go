@@ -1,6 +1,3 @@
-// Package server implements common websocket functionality on top of Gorilla,
-// include Ping/Pong heartbeat handling
-
 package ws
 
 import (
