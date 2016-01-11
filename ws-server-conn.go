@@ -56,9 +56,6 @@ type outgoingMessage struct {
 	data        []byte
 }
 
-func (c *Connection) Send(messageType EventType, data []byte) {
-	c.sendChan <- outgoingMessage{messageType, data}
-}
 func (c *Connection) SendBinary(data []byte) {
 	c.sendChan <- outgoingMessage{BinaryMessage, data}
 }
