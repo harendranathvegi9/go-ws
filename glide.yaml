@@ -1,0 +1,6 @@
+package: github.com/marcuswestin/go-ws
+import:
+- package: github.com/gorilla/websocket
+- package: log
+- package: net/http
+- package: time
