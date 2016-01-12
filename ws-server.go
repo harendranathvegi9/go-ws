@@ -39,22 +39,21 @@ var (
 	CheckOrigin = func(r *http.Request) bool { return true }
 )
 
-var upgrader websocket.Upgrader
-
 // Send pings to peer with this period. Must be less than PongWait.
 var pingPeriod time.Duration
-
-var called = false
+var upgrader websocket.Upgrader
+var called = false // Hack
 
 func UpgradeRequests(pattern string, eventHandler EventHandler) {
-	if called { // Tmp hack
+	if called {
 		panic("UpgradeRequests should be called once")
 	}
 	called = true
 	pingPeriod = (PongWait * 7) / 10
 	upgrader = websocket.Upgrader{
 		HandshakeTimeout,
-		ReadBufferSize, WriteBufferSize,
+		ReadBufferSize,
+		WriteBufferSize,
 		Subprotocols,
 		ErrorFn,
 		CheckOrigin,

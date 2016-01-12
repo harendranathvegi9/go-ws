@@ -19,7 +19,7 @@ func init() {
 	}
 }
 
-type EventHandler func(event *Event, connection *Connection)
+type EventHandler func(event *Event, conn *Conn)
 
 func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.Request) {
 	wsConn, err := upgrader.Upgrade(w, r, nil)
@@ -27,7 +27,7 @@ func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.
 		_generateEvent(eventHandler, Error, nil, nil, err)
 		return
 	}
-	c := &Connection{
+	c := &Conn{
 		Request:      r,
 		wsConn:       wsConn,
 		sendChan:     make(chan outgoingMessage, 256),
@@ -41,7 +41,7 @@ func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.
 	_generateEvent(eventHandler, Connected, c, nil, nil)
 }
 
-type Connection struct {
+type Conn struct {
 	*http.Request
 	wsConn       *websocket.Conn
 	sendChan     chan outgoingMessage
@@ -56,24 +56,24 @@ type outgoingMessage struct {
 	data        []byte
 }
 
-func (c *Connection) SendBinary(data []byte) {
+func (c *Conn) SendBinary(data []byte) {
 	c.sendChan <- outgoingMessage{BinaryMessage, data}
 }
-func (c *Connection) SendText(text string) {
+func (c *Conn) SendText(text string) {
 	c.sendChan <- outgoingMessage{TextMessage, []byte(text)}
 }
-func (c *Connection) Close() {
+func (c *Conn) Close() {
 	c._disconnect(nil)
 }
 
-func (c *Connection) String() string {
-	return "{Connection " + c.Request.RemoteAddr + "}"
+func (c *Conn) String() string {
+	return "{Conn " + c.Request.RemoteAddr + "}"
 }
 
 // Internal
 ///////////
 
-func (c *Connection) _writeLoop() {
+func (c *Conn) _writeLoop() {
 	c._write(websocket.PingMessage, []byte{})
 	for {
 		select {
@@ -88,7 +88,7 @@ func (c *Connection) _writeLoop() {
 		}
 	}
 }
-func (c *Connection) _write(messageType EventType, payload []byte) {
+func (c *Conn) _write(messageType EventType, payload []byte) {
 	err := c.wsConn.SetWriteDeadline(time.Now().Add(WriteWait))
 	if err != nil {
 		c._disconnect(err)
@@ -101,7 +101,7 @@ func (c *Connection) _write(messageType EventType, payload []byte) {
 	}
 }
 
-func (c *Connection) _readLoop() {
+func (c *Conn) _readLoop() {
 	// c.wsConn.SetReadLimit(512) // Maximum message size allowed from peer.
 	c.wsConn.SetPongHandler(func(string) error {
 		// TODO: Disconnect if err?
@@ -136,7 +136,7 @@ func (c *Connection) _readLoop() {
 	}
 }
 
-func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Connection, reader io.Reader, err error) {
+func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
 	if eventType == Error {
 		if err == nil {
 			panic("Expected an error")
@@ -157,7 +157,7 @@ func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Connec
 	event.reader = nil // See Event.Read
 }
 
-func (c *Connection) _disconnect(err error) {
+func (c *Conn) _disconnect(err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if c.isClosed {

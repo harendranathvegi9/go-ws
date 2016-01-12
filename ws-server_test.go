@@ -14,27 +14,27 @@ var addr = "localhost:8087"
 var dialer = websocket.Dialer{}
 
 func TestListenAndServe(t *testing.T) {
-	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, connection *ws.Connection) {
+	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn *ws.Conn) {
 		switch event.Type {
 		case ws.Connected:
-			log.Println("Client connected:", connection.RemoteAddr)
+			log.Println("Client connected:", conn.RemoteAddr)
 
 		case ws.TextMessage:
 			text, err := event.Text()
 			log.Println("Text message:", text, err)
-			connection.SendText(text)
+			conn.SendText(text)
 
 		case ws.BinaryMessage:
 			data, err := event.Data() // Or use `event` as an `io.Reader`
 			log.Println("Binary message size:", len(data), err)
-			connection.SendBinary(data)
+			conn.SendBinary(data)
 
 		case ws.Error:
-			log.Println("Connection error:", event.Error)
+			log.Println("Conn error:", event.Error)
 			panic(event.Error)
 
 		case ws.Disconnected:
-			log.Println("Client disconnected:", connection.RemoteAddr)
+			log.Println("Client disconnected:", conn.RemoteAddr)
 		}
 	})
 	go http.ListenAndServe(addr, nil)
