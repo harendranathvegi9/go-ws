@@ -17,7 +17,7 @@ type Conn interface {
 	SendBinary(data []byte)
 	SendText(text string)
 	Close()
-	RemoteAddr() string
+	HTTPRequest() *http.Request
 }
 
 type sendChan chan outboundFrame
@@ -35,11 +35,11 @@ func (c *baseConn) SendText(text string) {
 func (c *baseConn) Close() {
 	c._disconnect(nil)
 }
-func (c *baseConn) RemoteAddr() string {
-	return c.httpRequest.RemoteAddr
+func (c *baseConn) HTTPRequest() *http.Request {
+	return c.httpRequest
 }
 func (c *baseConn) String() string {
-	return "{Conn " + c.RemoteAddr() + "}"
+	return "{Conn " + c.httpRequest.URL.String() + "/" + c.httpRequest.RemoteAddr + "}"
 }
 
 // Internal
