@@ -3,6 +3,7 @@ package ws
 import (
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -10,7 +11,56 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type EventHandler func(event *Event, conn Conn)
+
+type Conn interface {
+	SendBinary(data []byte)
+	SendText(text string)
+	Close()
+	RemoteAddr() string
+}
+
+type sendChan chan outboundFrame
+type outboundFrame struct {
+	Type EventType
+	data []byte
+}
+
+func (c *baseConn) SendBinary(data []byte) {
+	c.sendChan <- outboundFrame{BinaryMessage, data}
+}
+func (c *baseConn) SendText(text string) {
+	c.sendChan <- outboundFrame{TextMessage, []byte(text)}
+}
+func (c *baseConn) Close() {
+	c._disconnect(nil)
+}
+func (c *baseConn) RemoteAddr() string {
+	return c.httpRequest.RemoteAddr
+}
+func (c *baseConn) String() string {
+	return "{Conn " + c.RemoteAddr() + "}"
+}
+
+// Internal
+///////////
+
+type baseConn struct {
+	// We use an event function instead of a channel in order to
+	// allow for events to be handled syncronously with the incoming
+	// websocket frame stream; this ensures that the handler function
+	// has access to the underlying io.Reader (which otherwise would go
+	// out of scope as soon as NextReader gets called again).
+	eventHandler EventHandler
+	httpRequest  *http.Request
+	wsConn       *websocket.Conn
+	sendChan     sendChan
+	pingTicker   *time.Ticker
+	closeOnce    sync.Once
+}
+
 func init() {
+	// Sanity check
 	if websocket.TextMessage != EventType(TextMessage) {
 		panic("Enum value mismatch: TextMessage")
 	}
@@ -19,61 +69,22 @@ func init() {
 	}
 }
 
-type EventHandler func(event *Event, conn *Conn)
-
-func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.Request) {
-	wsConn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		_generateEvent(eventHandler, Error, nil, nil, err)
-		return
-	}
-	c := &Conn{
-		Request:      r,
+func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler EventHandler) Conn {
+	conn := &baseConn{
+		httpRequest:  httpRequest,
 		wsConn:       wsConn,
-		sendChan:     make(chan outgoingMessage, 256),
+		sendChan:     make(sendChan, 256),
 		eventHandler: eventHandler,
 		pingTicker:   time.NewTicker(pingPeriod),
-		isClosed:     false,
-		mutex:        &sync.Mutex{},
+		closeOnce:    sync.Once{},
 	}
-	go c._writeLoop()
-	go c._readLoop()
-	_generateEvent(eventHandler, Connected, c, nil, nil)
+	go _generateEvent(eventHandler, Connected, conn, nil, nil)
+	go conn._writeLoop()
+	go conn._readLoop()
+	return conn
 }
 
-type Conn struct {
-	*http.Request
-	wsConn       *websocket.Conn
-	sendChan     chan outgoingMessage
-	eventHandler EventHandler
-	pingTicker   *time.Ticker
-	isClosed     bool
-	mutex        *sync.Mutex
-}
-
-type outgoingMessage struct {
-	messageType EventType
-	data        []byte
-}
-
-func (c *Conn) SendBinary(data []byte) {
-	c.sendChan <- outgoingMessage{BinaryMessage, data}
-}
-func (c *Conn) SendText(text string) {
-	c.sendChan <- outgoingMessage{TextMessage, []byte(text)}
-}
-func (c *Conn) Close() {
-	c._disconnect(nil)
-}
-
-func (c *Conn) String() string {
-	return "{Conn " + c.Request.RemoteAddr + "}"
-}
-
-// Internal
-///////////
-
-func (c *Conn) _writeLoop() {
+func (c *baseConn) _writeLoop() {
 	c._write(websocket.PingMessage, []byte{})
 	for {
 		select {
@@ -82,26 +93,26 @@ func (c *Conn) _writeLoop() {
 				c._disconnect(errors.New("Error reading from sendChan"))
 				return
 			}
-			c._write(message.messageType, message.data)
+			c._write(int(message.Type), message.data)
 		case <-c.pingTicker.C:
-			c._write(websocket.PingMessage, []byte{})
+			c._write(websocket.PingMessage, nil)
 		}
 	}
 }
-func (c *Conn) _write(messageType EventType, payload []byte) {
+func (c *baseConn) _write(frameType int, payload []byte) {
 	err := c.wsConn.SetWriteDeadline(time.Now().Add(WriteWait))
 	if err != nil {
 		c._disconnect(err)
 		return
 	}
-	err = c.wsConn.WriteMessage(int(messageType), payload)
+	err = c.wsConn.WriteMessage(frameType, payload)
 	if err != nil {
 		c._disconnect(err)
 		return
 	}
 }
 
-func (c *Conn) _readLoop() {
+func (c *baseConn) _readLoop() {
 	// c.wsConn.SetReadLimit(512) // Maximum message size allowed from peer.
 	c.wsConn.SetPongHandler(func(string) error {
 		// TODO: Disconnect if err?
@@ -109,7 +120,7 @@ func (c *Conn) _readLoop() {
 	})
 
 	for {
-		messageType, reader, err := c.wsConn.NextReader()
+		frameType, reader, err := c.wsConn.NextReader()
 		if err != nil {
 			if _, ok := (err.(*websocket.CloseError)); ok {
 				// This can happen when the client websocket closes.
@@ -120,15 +131,18 @@ func (c *Conn) _readLoop() {
 				// Just disconnect on clean ends
 				c._disconnect(nil)
 
+				// } else if err == "connection reset by peer" {
+				// } else if neterr, ok := err.(net.Error); ok {
+				// 	neterr.
 			} else {
 				c._disconnect(err)
 			}
 			break
 		}
 
-		if messageType == websocket.TextMessage {
+		if frameType == websocket.TextMessage {
 			_generateEvent(c.eventHandler, TextMessage, c, reader, nil)
-		} else if messageType == websocket.BinaryMessage {
+		} else if frameType == websocket.BinaryMessage {
 			_generateEvent(c.eventHandler, BinaryMessage, c, reader, nil)
 		} else {
 			_generateEvent(c.eventHandler, Error, c, nil, errors.New("Bad message type"))
@@ -136,8 +150,8 @@ func (c *Conn) _readLoop() {
 	}
 }
 
-func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
-	if eventType == Error {
+func _generateEvent(eventHandler EventHandler, eventType EventType, conn Conn, reader io.Reader, err error) {
+	if eventType == Error || eventType == NetError {
 		if err == nil {
 			panic("Expected an error")
 		}
@@ -157,20 +171,22 @@ func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, 
 	event.reader = nil // See Event.Read
 }
 
-func (c *Conn) _disconnect(err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	if c.isClosed {
-		return
-	}
-	c.isClosed = true
-	eventHandler := c.eventHandler
-	c.eventHandler = nil
-	c.wsConn.Close()
-	c.pingTicker.Stop()
-	close(c.sendChan)
-	if err != nil {
-		_generateEvent(eventHandler, Error, c, nil, err)
-	}
-	_generateEvent(eventHandler, Disconnected, c, nil, nil)
+func (c *baseConn) _disconnect(err error) {
+	c.closeOnce.Do(func() {
+		eventHandler := c.eventHandler
+		c.eventHandler = nil
+		c.wsConn.Close()
+		c.pingTicker.Stop()
+		close(c.sendChan)
+		go func() {
+			if err != nil {
+				if netError, ok := err.(net.Error); ok {
+					_generateEvent(eventHandler, NetError, c, nil, netError)
+				} else {
+					_generateEvent(eventHandler, NetError, c, nil, err)
+				}
+			}
+			_generateEvent(eventHandler, Disconnected, c, nil, nil)
+		}()
+	})
 }
