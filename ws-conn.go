@@ -11,8 +11,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type EventHandler func(event *Event, conn Conn)
-
+// Conn is a handle to underlying websocket connections.
+// It allows you to send messages and close the connection,
+// as well as query the underlying
 type Conn interface {
 	SendBinary(data []byte)
 	SendText(text string)

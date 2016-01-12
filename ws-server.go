@@ -2,48 +2,37 @@ package ws
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 var (
-	// Time allowed to write a message to the peer.
-	WriteWait = 10 * time.Second
+	/*
+		HTTP Upgrade Options
 
-	// Time allowed to read the next pong message from the peer.
-	PongWait = 60 * time.Second
+		These are the different options
+	*/
+	// The Upgrader calls the function specified in the CheckOrigin field to check
+	// the origin. If the CheckOrigin function returns false, then the Upgrade
+	// method fails the WebSocket handshake with HTTP status 403.
+	// If nil, then use a safe default: fail the handshake if the Origin request
+	// header is present and not equal to the Host request header.
+	CheckOrigin func(r *http.Request) bool
 
-	// Maximum message size allowed from peer.
-	MaxMessageSize = int64(512)
-
-	// Read buffer size of websocket upgrader
-	ReadBufferSize = 4096
-
-	// Write buffer size of websocket upgrader
-	WriteBufferSize = 4096
-
-	// HandshakeTimeout specifies the duration for the handshake to complete.
-	HandshakeTimeout = time.Duration(0)
-
-	// Subprotocols specifies the server's supported protocols in order of
-	// preference. If this option is set, then the upgrade handler negotiates a
-	// subprotocol by selecting the first match in this list with a protocol
-	// requested by the client.
-	Subprotocols []string
-
-	// ErrorFn specifies the function for generating HTTP error responses. If ErrorFn
-	// is nil, then http.Error is used to generate the HTTP response.
+	// ErrorFn specifies the function for generating HTTP error responses.
+	// If nil, then http.Error is used to generate the HTTP response.
 	ErrorFn func(w http.ResponseWriter, r *http.Request, status int, reason error)
 
-	CheckOrigin = func(r *http.Request) bool { return true }
+	// Subprotocols specifies the server's supported protocols in order of
+	// preference.
+	// If set, the upgrade handler negotiates a subprotocol by selecting the
+	// first match in this list with a protocol requested by the client.
+	Subprotocols []string
 )
 
-// Send pings to peer with this period. Must be less than PongWait.
-var pingPeriod time.Duration
-var upgrader websocket.Upgrader
-var called = false // Hack
-
+// UpgradeRequests will upgrade any incoming websocket request
+// matching the given pattern, and then call the event handler
+// function with connection events.
 func UpgradeRequests(pattern string, eventHandler EventHandler) {
 	if called {
 		panic("UpgradeRequests should be called once")
@@ -63,6 +52,12 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 	})
 	return
 }
+
+// Internal
+///////////
+
+var upgrader websocket.Upgrader
+var called = false // Hack
 
 func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.Request) {
 	wsConn, err := upgrader.Upgrade(w, r, nil)

@@ -6,6 +6,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Connect opens a websocket connection to the given address,
+// and starts generating events.
 func Connect(addr string, eventHandler EventHandler) {
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
 		addr = strings.Replace(addr, "http", "ws", 1)
