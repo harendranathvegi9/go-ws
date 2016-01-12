@@ -60,8 +60,18 @@ func connect(t *testing.T) (testConn ws.Conn, eventChan EventChan) {
 		log.Println("Client: Event", event.Type)
 		assert(t, event.Type != ws.Error, "Received error event", event.Error)
 		testConn = conn
-		data, err := event.Data()
-		assert(t, err == nil, "Unable to read event data", err)
+
+		var data []byte
+		if event.Type == ws.BinaryMessage {
+			bts, err := event.Data()
+			assert(t, err == nil, "Unable to read event data", err)
+			data = bts
+		} else if event.Type == ws.TextMessage {
+			text, err := event.Text()
+			assert(t, err == nil, "Unable to read event data", err)
+			data = []byte(text)
+		}
+
 		eventChan <- TestEvent{event.Type, data}
 	})
 	receive(t, eventChan, ws.Connected)

@@ -55,13 +55,19 @@ var (
 // Text reads the data of the underlying text message
 // frame and returns it as a string.
 func (e *Event) Text() (string, error) {
-	bts, err := e.Data()
+	if e.Type != TextMessage {
+		return "", errors.New("Event.Text() called on non-TextMessage event")
+	}
+	bts, err := ioutil.ReadAll(e)
 	return string(bts), err
 }
 
 // Data reads the data of the underlying binary message
 // frame and returns it.
 func (e *Event) Data() ([]byte, error) {
+	if e.Type != BinaryMessage {
+		return nil, errors.New("Event.Text() called on non-BinaryMessage event")
+	}
 	return ioutil.ReadAll(e)
 }
 
