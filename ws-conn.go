@@ -42,9 +42,16 @@ func (c *Conn) SendBinary(data []byte) (err error) {
 func (c *Conn) SendText(text string) (err error) {
 	return c._send(TextMessage, []byte(text))
 }
+
+// Close the connection. Once Close has returned no more messages will
+// be sent. However, the connection's EventHandler function may still
+// generate more events.
 func (c *Conn) Close() {
 	c._disconnect(nil)
 }
+
+// String returns a string representation of the connection,
+// including the underlying HTTP request's URL and remote address
 func (c *Conn) String() string {
 	return "{Conn " + c.HTTPRequest.URL.String() + "/" + c.HTTPRequest.RemoteAddr + "}"
 }

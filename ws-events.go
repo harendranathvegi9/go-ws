@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 )
 
+// EventHandler is a function that gets called once for each connection event.
+// Each connection's EventHandler function is guaranteed to be called serially
+// per-connection, but may be called concurrently across multiple connections.
 type EventHandler func(event *Event, conn *Conn)
 type EventType uint8
 
