@@ -184,19 +184,17 @@ func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, 
 
 func (c *Conn) _disconnect(err error) {
 	c.closeOnce.Do(func() {
-		eventHandler := c.eventHandler
-		c.eventHandler = nil
 		c.pingTicker.Stop()
 		c.wsConn.Close()
 		go func() {
 			if err != nil {
 				if netError, ok := err.(net.Error); ok {
-					_generateEvent(eventHandler, NetError, c, nil, netError)
+					_generateEvent(c.eventHandler, NetError, c, nil, netError)
 				} else {
-					_generateEvent(eventHandler, NetError, c, nil, err)
+					_generateEvent(c.eventHandler, NetError, c, nil, err)
 				}
 			}
-			_generateEvent(eventHandler, Disconnected, c, nil, nil)
+			_generateEvent(c.eventHandler, Disconnected, c, nil, nil)
 		}()
 	})
 }
