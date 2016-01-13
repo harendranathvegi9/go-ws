@@ -27,6 +27,10 @@ var (
 	// HandshakeTimeout specifies the duration for the handshake to complete.
 	HandshakeTimeout = time.Duration(0)
 
+	// Maximum number of messages to buffer per connection before SendText
+	// and SendBinary starts dropping messages and return ErrorSendFullBuffer.
+	ConnMaxSendBufferLen = 64
+
 	// Internal
 	///////////
 

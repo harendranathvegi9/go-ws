@@ -72,7 +72,7 @@ func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler Eve
 	conn := &Conn{
 		HTTPRequest:  httpRequest,
 		wsConn:       wsConn,
-		sendChan:     make(sendChan, 256),
+		sendChan:     make(sendChan, ConnMaxSendBufferLen),
 		eventHandler: eventHandler,
 		pingTicker:   time.NewTicker(pingPeriod),
 		closeOnce:    sync.Once{},
