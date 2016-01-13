@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 )
 
-type EventHandler func(event *Event, conn Conn)
+type EventHandler func(event *Event, conn *Conn)
 type EventType uint8
 
 // Event encapsulates the information passed to EventHandlers.

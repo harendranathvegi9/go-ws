@@ -13,51 +13,44 @@ import (
 
 // Conn is a handle to underlying websocket connections.
 // It allows you to send messages and close the connection,
-// as well as query the underlying
-type Conn interface {
-	SendBinary(data []byte)
-	SendText(text string)
-	Close()
-	HTTPRequest() *http.Request
-}
-
-type sendChan chan outboundFrame
-type outboundFrame struct {
-	Type EventType
-	data []byte
-}
-
-func (c *baseConn) SendBinary(data []byte) {
-	c.sendChan <- outboundFrame{BinaryMessage, data}
-}
-func (c *baseConn) SendText(text string) {
-	c.sendChan <- outboundFrame{TextMessage, []byte(text)}
-}
-func (c *baseConn) Close() {
-	c._disconnect(nil)
-}
-func (c *baseConn) HTTPRequest() *http.Request {
-	return c.httpRequest
-}
-func (c *baseConn) String() string {
-	return "{Conn " + c.httpRequest.URL.String() + "/" + c.httpRequest.RemoteAddr + "}"
-}
-
-// Internal
-///////////
-
-type baseConn struct {
+// as well as to get info on the underlying HTTP Request.
+type Conn struct {
+	*http.Request
 	// We use an event function instead of a channel in order to
 	// allow for events to be handled syncronously with the incoming
 	// websocket frame stream; this ensures that the handler function
 	// has access to the underlying io.Reader (which otherwise would go
 	// out of scope as soon as NextReader gets called again).
 	eventHandler EventHandler
-	httpRequest  *http.Request
 	wsConn       *websocket.Conn
 	sendChan     sendChan
 	pingTicker   *time.Ticker
 	closeOnce    sync.Once
+}
+
+func (c *Conn) SendBinary(data []byte) {
+	c.sendChan <- outboundFrame{BinaryMessage, data}
+}
+func (c *Conn) SendText(text string) {
+	c.sendChan <- outboundFrame{TextMessage, []byte(text)}
+}
+func (c *Conn) Close() {
+	c._disconnect(nil)
+}
+func (c *Conn) HTTPRequest() *http.Request {
+	return c.httpRequest
+}
+func (c *Conn) String() string {
+	return "{Conn " + c.httpRequest.URL.String() + "/" + c.httpRequest.RemoteAddr + "}"
+}
+
+// Internal
+///////////
+
+type sendChan chan outboundFrame
+type outboundFrame struct {
+	Type EventType
+	data []byte
 }
 
 func init() {
@@ -70,9 +63,9 @@ func init() {
 	}
 }
 
-func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler EventHandler) Conn {
-	conn := &baseConn{
-		httpRequest:  httpRequest,
+func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler EventHandler) *Conn {
+	conn := &Conn{
+		Request:      httpRequest,
 		wsConn:       wsConn,
 		sendChan:     make(sendChan, 256),
 		eventHandler: eventHandler,
@@ -85,7 +78,7 @@ func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler Eve
 	return conn
 }
 
-func (c *baseConn) _writeLoop() {
+func (c *Conn) _writeLoop() {
 	c._write(websocket.PingMessage, []byte{})
 	for {
 		select {
@@ -100,7 +93,7 @@ func (c *baseConn) _writeLoop() {
 		}
 	}
 }
-func (c *baseConn) _write(frameType int, payload []byte) {
+func (c *Conn) _write(frameType int, payload []byte) {
 	err := c.wsConn.SetWriteDeadline(time.Now().Add(WriteWait))
 	if err != nil {
 		c._disconnect(err)
@@ -113,7 +106,7 @@ func (c *baseConn) _write(frameType int, payload []byte) {
 	}
 }
 
-func (c *baseConn) _readLoop() {
+func (c *Conn) _readLoop() {
 	// c.wsConn.SetReadLimit(512) // Maximum message size allowed from peer.
 	c.wsConn.SetPongHandler(func(string) error {
 		// TODO: Disconnect if err?
@@ -151,7 +144,7 @@ func (c *baseConn) _readLoop() {
 	}
 }
 
-func _generateEvent(eventHandler EventHandler, eventType EventType, conn Conn, reader io.Reader, err error) {
+func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
 	if eventType == Error || eventType == NetError {
 		if err == nil {
 			panic("Expected an error")
@@ -172,7 +165,7 @@ func _generateEvent(eventHandler EventHandler, eventType EventType, conn Conn, r
 	event.reader = nil // See Event.Read
 }
 
-func (c *baseConn) _disconnect(err error) {
+func (c *Conn) _disconnect(err error) {
 	c.closeOnce.Do(func() {
 		eventHandler := c.eventHandler
 		c.eventHandler = nil

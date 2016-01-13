@@ -9,7 +9,7 @@ import (
 
 func ExampleUpgradeRequests_server() {
 	// Implement an echo server with logging of connection events
-	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn ws.Conn) {
+	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn *ws.Conn) {
 		switch event.Type {
 		case ws.Connected:
 			fmt.Println("Client connected:", conn.HTTPRequest().RemoteAddr)
@@ -42,7 +42,7 @@ func ExampleConnect_client() {
 	doneChan := make(chan bool)
 	defer func() { <-doneChan }()
 
-	ws.Connect("http://localhost:8087/ws/echo", func(event *ws.Event, conn ws.Conn) {
+	ws.Connect("http://localhost:8087/ws/echo", func(event *ws.Event, conn *ws.Conn) {
 		switch event.Type {
 		case ws.Connected:
 			fmt.Println("- Connected")

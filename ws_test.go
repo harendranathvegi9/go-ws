@@ -16,7 +16,7 @@ var dialer = websocket.Dialer{}
 var serverURL = "http://" + addr + "/ws/echo"
 
 func TestListenAndServe(t *testing.T) {
-	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn ws.Conn) {
+	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn *ws.Conn) {
 		switch event.Type {
 		case ws.Connected:
 			log.Println("Server received connection:", conn)
@@ -54,9 +54,9 @@ type TestEvent struct {
 	Data []byte
 }
 
-func connect(t *testing.T) (testConn ws.Conn, eventChan EventChan) {
+func connect(t *testing.T) (testConn *ws.Conn, eventChan EventChan) {
 	eventChan = make(EventChan)
-	ws.Connect(serverURL, func(event *ws.Event, conn ws.Conn) {
+	ws.Connect(serverURL, func(event *ws.Event, conn *ws.Conn) {
 		log.Println("Client: Event", event.Type)
 		assert(t, event.Type != ws.Error, "Received error event", event.Error)
 		testConn = conn
@@ -129,7 +129,7 @@ func receive(t *testing.T, eventChan EventChan, eventType ws.EventType) TestEven
 	return event
 }
 
-func sendRecv(t *testing.T, conn ws.Conn, eventChan EventChan, messageType ws.EventType) {
+func sendRecv(t *testing.T, conn *ws.Conn, eventChan EventChan, messageType ws.EventType) {
 	const message = "Hello World!"
 	if messageType == ws.BinaryMessage {
 		conn.SendBinary([]byte(message))
