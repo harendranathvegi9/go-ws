@@ -12,7 +12,7 @@ func ExampleUpgradeRequests_server() {
 	ws.UpgradeRequests("/ws/echo", func(event *ws.Event, conn *ws.Conn) {
 		switch event.Type {
 		case ws.Connected:
-			fmt.Println("Client connected:", conn.HTTPRequest().RemoteAddr)
+			fmt.Println("Client connected:", conn.HTTPRequest.RemoteAddr)
 
 		case ws.TextMessage:
 			text, err := event.Text()
@@ -31,7 +31,7 @@ func ExampleUpgradeRequests_server() {
 			fmt.Println("Network error:", event.Error)
 
 		case ws.Disconnected:
-			fmt.Println("Client disconnected:", conn.HTTPRequest().RemoteAddr)
+			fmt.Println("Client disconnected:", conn.HTTPRequest.RemoteAddr)
 		}
 	})
 	// ws.UpgradeRequests requires a listening http server

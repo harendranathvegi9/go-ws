@@ -15,7 +15,7 @@ import (
 // It allows you to send messages and close the connection,
 // as well as to get info on the underlying HTTP Request.
 type Conn struct {
-	*http.Request
+	HTTPRequest *http.Request
 	// We use an event function instead of a channel in order to
 	// allow for events to be handled syncronously with the incoming
 	// websocket frame stream; this ensures that the handler function
@@ -37,11 +37,8 @@ func (c *Conn) SendText(text string) {
 func (c *Conn) Close() {
 	c._disconnect(nil)
 }
-func (c *Conn) HTTPRequest() *http.Request {
-	return c.httpRequest
-}
 func (c *Conn) String() string {
-	return "{Conn " + c.httpRequest.URL.String() + "/" + c.httpRequest.RemoteAddr + "}"
+	return "{Conn " + c.HTTPRequest.URL.String() + "/" + c.HTTPRequest.RemoteAddr + "}"
 }
 
 // Internal
@@ -65,7 +62,7 @@ func init() {
 
 func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler EventHandler) *Conn {
 	conn := &Conn{
-		Request:      httpRequest,
+		HTTPRequest:  httpRequest,
 		wsConn:       wsConn,
 		sendChan:     make(sendChan, 256),
 		eventHandler: eventHandler,

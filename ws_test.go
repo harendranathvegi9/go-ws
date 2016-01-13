@@ -36,7 +36,7 @@ func TestListenAndServe(t *testing.T) {
 			conn.SendBinary(data)
 
 		case ws.Error:
-			panic("Server error Conn: " + conn.HTTPRequest().RemoteAddr + ", Error: " + event.Error.Error())
+			panic("Server error Conn: " + conn.HTTPRequest.RemoteAddr + ", Error: " + event.Error.Error())
 
 		case ws.NetError:
 			log.Println("Server saw net error:", conn, event.Error)
