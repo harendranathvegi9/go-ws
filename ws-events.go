@@ -103,3 +103,24 @@ var eventHasReader = map[EventType]bool{
 }
 
 func (e EventType) String() string { return eventTypeNames[e] }
+
+func _checkAndGenerateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
+	if eventType == Error || eventType == NetError {
+		if err == nil {
+			panic("Expected an error")
+		}
+	} else if eventType == TextMessage || eventType == BinaryMessage {
+		if reader == nil || conn == nil || err != nil {
+			panic("Expected a reader, a connection, and no error")
+		}
+	} else if eventType == Connected || eventType == Disconnected {
+		if conn == nil || err != nil {
+			panic("Expected a connection, and no error")
+		}
+	} else {
+		panic("Bad event type")
+	}
+	event := &Event{eventType, err, reader}
+	eventHandler(event, conn)
+	event.reader = nil // See Event.Read
+}

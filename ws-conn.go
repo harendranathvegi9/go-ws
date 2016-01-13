@@ -168,31 +168,6 @@ func (c *Conn) _readLoop() {
 	}
 }
 
-func (c *Conn) _generateEvent(eventType EventType, reader io.Reader, err error) {
-	_generateEvent(c.eventHandler, eventType, c, reader, err)
-}
-
-func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
-	if eventType == Error || eventType == NetError {
-		if err == nil {
-			panic("Expected an error")
-		}
-	} else if eventType == TextMessage || eventType == BinaryMessage {
-		if reader == nil || conn == nil || err != nil {
-			panic("Expected a reader, a connection, and no error")
-		}
-	} else if eventType == Connected || eventType == Disconnected {
-		if conn == nil || err != nil {
-			panic("Expected a connection, and no error")
-		}
-	} else {
-		panic("Bad event type")
-	}
-	event := &Event{eventType, err, reader}
-	eventHandler(event, conn)
-	event.reader = nil // See Event.Read
-}
-
 func (c *Conn) _disconnect(err error) {
 	c.closeOnce.Do(func() {
 		c.pingTicker.Stop()
@@ -208,4 +183,8 @@ func (c *Conn) _disconnect(err error) {
 			c._generateEvent(Disconnected, nil, nil)
 		}()
 	})
+}
+
+func (c *Conn) _generateEvent(eventType EventType, reader io.Reader, err error) {
+	_checkAndGenerateEvent(c.eventHandler, eventType, c, reader, err)
 }

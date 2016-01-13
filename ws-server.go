@@ -62,7 +62,7 @@ var called = false // Hack
 func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.Request) {
 	wsConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		_generateEvent(eventHandler, Error, nil, nil, err)
+		_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
 		return
 	}
 	newConn(r, wsConn, eventHandler)

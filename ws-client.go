@@ -14,7 +14,7 @@ func Connect(addr string, eventHandler EventHandler) {
 	}
 	wsConn, httpRes, err := dialer.Dial(addr, nil)
 	if err != nil {
-		_generateEvent(eventHandler, Error, nil, nil, err)
+		_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
 		return
 	}
 	newConn(httpRes.Request, wsConn, eventHandler) // sets up read/write loop
