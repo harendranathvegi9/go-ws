@@ -1,6 +1,9 @@
 package ws
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 var (
 	/*
@@ -29,4 +32,15 @@ var (
 
 	// Send pings to peer with this period. Must be less than PongWait.
 	pingPeriod time.Duration
+)
+
+var (
+	/*
+		Errors
+	*/
+	// Returned by SendText and SendBinary if called on a closed connection.
+	ErrorSendClosedConn = errors.New("send on closed connection")
+
+	// Returned by SendText and SendBinary if called on a connection with a full buffer.
+	ErrorSendFullBuffer = errors.New("send on connection with full buffer")
 )

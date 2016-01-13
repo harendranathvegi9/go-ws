@@ -26,13 +26,21 @@ type Conn struct {
 	sendChan     sendChan
 	pingTicker   *time.Ticker
 	closeOnce    sync.Once
+	didClose     bool
 }
 
-func (c *Conn) SendBinary(data []byte) {
-	c.sendChan <- outboundFrame{BinaryMessage, data}
+// SendBinary sends a binary websocket message and returns an error if the
+// connection has been closed (ErrorSendClosedConn) or if its send buffer
+// is full (ErrorSendFullBuffer).
+func (c *Conn) SendBinary(data []byte) (err error) {
+	return c._send(BinaryMessage, data)
 }
-func (c *Conn) SendText(text string) {
-	c.sendChan <- outboundFrame{TextMessage, []byte(text)}
+
+// SendText sends a text websocket message and returns an error if the
+// connection has been closed (ErrorSendClosedConn) or if its send buffer
+// is full (ErrorSendFullBuffer).
+func (c *Conn) SendText(text string) (err error) {
+	return c._send(TextMessage, []byte(text))
 }
 func (c *Conn) Close() {
 	c._disconnect(nil)
@@ -73,6 +81,18 @@ func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler Eve
 	go conn._writeLoop()
 	go conn._readLoop()
 	return conn
+}
+
+func (c *Conn) _send(msgType EventType, data []byte) error {
+	if c.didClose {
+		return ErrorSendClosedConn
+	}
+	select {
+	case c.sendChan <- outboundFrame{msgType, data}:
+		return nil
+	default:
+		return ErrorSendFullBuffer
+	}
 }
 
 func (c *Conn) _writeLoop() {
@@ -166,9 +186,8 @@ func (c *Conn) _disconnect(err error) {
 	c.closeOnce.Do(func() {
 		eventHandler := c.eventHandler
 		c.eventHandler = nil
-		c.wsConn.Close()
 		c.pingTicker.Stop()
-		close(c.sendChan)
+		c.wsConn.Close()
 		go func() {
 			if err != nil {
 				if netError, ok := err.(net.Error); ok {
