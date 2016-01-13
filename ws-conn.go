@@ -84,7 +84,7 @@ func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler Eve
 		pingTicker:   time.NewTicker(pingPeriod),
 		closeOnce:    sync.Once{},
 	}
-	go _generateEvent(eventHandler, Connected, conn, nil, nil)
+	go conn._generateEvent(Connected, nil, nil)
 	go conn._writeLoop()
 	go conn._readLoop()
 	return conn
@@ -159,13 +159,17 @@ func (c *Conn) _readLoop() {
 		}
 
 		if frameType == websocket.TextMessage {
-			_generateEvent(c.eventHandler, TextMessage, c, reader, nil)
+			c._generateEvent(TextMessage, reader, nil)
 		} else if frameType == websocket.BinaryMessage {
-			_generateEvent(c.eventHandler, BinaryMessage, c, reader, nil)
+			c._generateEvent(BinaryMessage, reader, nil)
 		} else {
-			_generateEvent(c.eventHandler, Error, c, nil, errors.New("Bad message type"))
+			c._generateEvent(Error, nil, errors.New("Bad message type"))
 		}
 	}
+}
+
+func (c *Conn) _generateEvent(eventType EventType, reader io.Reader, err error) {
+	_generateEvent(c.eventHandler, eventType, c, reader, err)
 }
 
 func _generateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
@@ -196,12 +200,12 @@ func (c *Conn) _disconnect(err error) {
 		go func() {
 			if err != nil {
 				if netError, ok := err.(net.Error); ok {
-					_generateEvent(c.eventHandler, NetError, c, nil, netError)
+					c._generateEvent(NetError, nil, netError)
 				} else {
-					_generateEvent(c.eventHandler, NetError, c, nil, err)
+					c._generateEvent(NetError, nil, err)
 				}
 			}
-			_generateEvent(c.eventHandler, Disconnected, c, nil, nil)
+			c._generateEvent(Disconnected, nil, nil)
 		}()
 	})
 }
