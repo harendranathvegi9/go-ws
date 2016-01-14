@@ -85,16 +85,25 @@ func (e *Event) Read(p []byte) (int, error) {
 	return e.reader.Read(p)
 }
 
+// String returns a string representation of Event that is suitable for debugging
+func (e *Event) String() string {
+	if e.Type == Error {
+		return "{ws.Event Error " + e.Error.Error() + "}"
+	} else {
+		return "{ws.Event " + e.Type.String() + "}"
+	}
+}
+
 // Internal
 ///////////
 
 var eventTypeNames = map[EventType]string{
-	Connected:     "<Connected>",
-	Disconnected:  "<Disconnected>",
-	TextMessage:   "<TextMessage>",
-	BinaryMessage: "<BinaryMessage>",
-	Error:         "<Error>",
-	NetError:      "<NetError>",
+	Connected:     "<EventConnected>",
+	Disconnected:  "<EventDisconnected>",
+	TextMessage:   "<EventTextMessage>",
+	BinaryMessage: "<EventBinaryMessage>",
+	Error:         "<EventError>",
+	NetError:      "<EventNetError>",
 }
 
 var eventHasReader = map[EventType]bool{
@@ -102,7 +111,13 @@ var eventHasReader = map[EventType]bool{
 	BinaryMessage: true,
 }
 
-func (e EventType) String() string { return eventTypeNames[e] }
+func (e EventType) String() string {
+	if name, exists := eventTypeNames[e]; exists {
+		return name
+	} else {
+		panic("EventType.String unknown event type")
+	}
+}
 
 func _checkAndGenerateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
 	if eventType == Error || eventType == NetError {
