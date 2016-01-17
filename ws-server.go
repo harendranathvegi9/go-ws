@@ -34,12 +34,8 @@ var (
 // matching the given pattern, and then call the event handler
 // function with connection events.
 func UpgradeRequests(pattern string, eventHandler EventHandler) {
-	if called {
-		panic("UpgradeRequests should be called once")
-	}
-	called = true
 	pingPeriod = (PongWait * 7) / 10
-	upgrader = websocket.Upgrader{
+	upgrader := websocket.Upgrader{
 		HandshakeTimeout,
 		ReadBufferSize,
 		WriteBufferSize,
@@ -48,22 +44,12 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		CheckOrigin,
 	}
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		upgradeWebsocket(eventHandler, w, r)
+		wsConn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
+		} else {
+			newConn(r, wsConn, eventHandler)
+		}
 	})
 	return
-}
-
-// Internal
-///////////
-
-var upgrader websocket.Upgrader
-var called = false // Hack
-
-func upgradeWebsocket(eventHandler EventHandler, w http.ResponseWriter, r *http.Request) {
-	wsConn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
-		return
-	}
-	newConn(r, wsConn, eventHandler)
 }
