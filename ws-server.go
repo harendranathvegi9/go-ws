@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/marcuswestin/go-errs"
 )
 
 var (
@@ -22,12 +23,6 @@ var (
 	// ErrorFn specifies the function for generating HTTP error responses.
 	// If nil, then http.Error is used to generate the HTTP response.
 	ErrorFn func(w http.ResponseWriter, r *http.Request, status int, reason error)
-
-	// Subprotocols specifies the server's supported protocols in order of
-	// preference.
-	// If set, the upgrade handler negotiates a subprotocol by selecting the
-	// first match in this list with a protocol requested by the client.
-	Subprotocols []string
 )
 
 // UpgradeRequests will upgrade any incoming websocket request
@@ -39,7 +34,7 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		HandshakeTimeout,
 		ReadBufferSize,
 		WriteBufferSize,
-		Subprotocols,
+		[]string{"birect"},
 		ErrorFn,
 		CheckOrigin,
 	}
@@ -47,6 +42,8 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		wsConn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
+		} else if wsConn.Subprotocol() != "birect" {
+			_checkAndGenerateEvent(eventHandler, Error, nil, nil, errs.New(nil, "Unable to negotiate birect subprotocol"))
 		} else {
 			newConn(r, wsConn, eventHandler)
 		}
