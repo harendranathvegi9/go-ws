@@ -4,4 +4,4 @@ dependencies:
 
 test:
   override:
-    - make test-race
+    - make test
