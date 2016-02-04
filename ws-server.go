@@ -13,7 +13,8 @@ var (
 
 		These are the different options
 	*/
-	// The Upgrader calls the function specified in the CheckOrigin field to check
+
+	// CheckOrigin will be called by the upgrader on incoming requests to check
 	// the origin. If the CheckOrigin function returns false, then the Upgrade
 	// method fails the WebSocket handshake with HTTP status 403.
 	// If nil, then use a safe default: fail the handshake if the Origin request

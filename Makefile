@@ -1,8 +1,9 @@
-test:
-	go test -v github.com/marcuswestin/go-ws
-
-test-repeat:
-	set -e && while true; do make test; done
-
-test-race:
-	go test --race -v github.com/marcuswestin/go-ws
+test: lint vet
+	go test -v .
+test-race: test
+	go test --race -v .
+lint:
+	golint .
+	test -z "$$(golint .)"
+vet:
+	go vet .

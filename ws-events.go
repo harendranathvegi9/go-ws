@@ -10,6 +10,9 @@ import (
 // Each connection's EventHandler function is guaranteed to be called serially
 // per-connection, but may be called concurrently across multiple connections.
 type EventHandler func(event *Event, conn *Conn)
+
+// EventType is the type of websocket event:
+// Connected, TextMessage, BinaryMessage, Error, NetError, Disconnected
 type EventType uint8
 
 // Event encapsulates the information passed to EventHandlers.
@@ -30,27 +33,29 @@ var (
 		These signifiy the different types of events that
 		happen during the lifetime of an underlying websocket.
 	*/
-	// A text message was received.
+
+	// TextMessage signifies that a text message was received.
 	// Use Event.Text() to read the string.
 	TextMessage = EventType(1)
 
-	// A binary frame was received.
+	// BinaryMessage signifies that a binary frame was received.
 	// Use Event.Data() to read the data.
 	BinaryMessage = EventType(2)
 
-	// The websocket connected.
+	// Connected signifies that the websocket connected.
 	// You are online!
 	Connected = EventType(3)
 
-	// The websocket disconnected. It should no longer be used.
+	// Disconnected signifies that the websocket disconnected.
+	// It should no longer be used.
 	Disconnected = EventType(4)
 
-	// A network error occured.
+	// NetError signifies that a network error occured.
 	// This will always be followed by a Disconnected event.
 	// These events can generally be ignored.
 	NetError = EventType(5)
 
-	// An unforeseen error occured.
+	// Error signifies that an unforeseen error occured.
 	// This will always be followed by a Disconnected event.
 	Error = EventType(6)
 )
@@ -89,9 +94,8 @@ func (e *Event) Read(p []byte) (int, error) {
 func (e *Event) String() string {
 	if e.Type == Error {
 		return "{ws.Event Error " + e.Error.Error() + "}"
-	} else {
-		return "{ws.Event " + e.Type.String() + "}"
 	}
+	return "{ws.Event " + e.Type.String() + "}"
 }
 
 // Internal
@@ -114,9 +118,8 @@ var eventHasReader = map[EventType]bool{
 func (e EventType) String() string {
 	if name, exists := eventTypeNames[e]; exists {
 		return name
-	} else {
-		panic("EventType.String unknown event type")
 	}
+	panic("EventType.String unknown event type")
 }
 
 func _checkAndGenerateEvent(eventHandler EventHandler, eventType EventType, conn *Conn, reader io.Reader, err error) {
