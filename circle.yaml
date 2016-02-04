@@ -1,7 +1,7 @@
 dependencies:
-  pre:
+  post:
     - go get -u github.com/golang/lint/golint
 
 test:
   override:
-      - make test-race
+    - make test-race
