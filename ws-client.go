@@ -10,6 +10,7 @@ import (
 // Connect opens a websocket connection to the given address,
 // and starts generating events.
 func Connect(addr string, eventHandler EventHandler) {
+	pingPeriod = (PongWait * 7) / 10
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
 		addr = strings.Replace(addr, "http", "ws", 1)
 	}
