@@ -30,14 +30,13 @@ var (
 // matching the given pattern, and then call the event handler
 // function with connection events.
 func UpgradeRequests(pattern string, eventHandler EventHandler) {
-	pingPeriod = (PongWait * 7) / 10
 	upgrader := websocket.Upgrader{
-		HandshakeTimeout,
-		ReadBufferSize,
-		WriteBufferSize,
-		[]string{"birect"},
-		ErrorFn,
-		CheckOrigin,
+		HandshakeTimeout: HandshakeTimeout,
+		ReadBufferSize:   ReadBufferSize,
+		WriteBufferSize:  WriteBufferSize,
+		Subprotocols:     []string{"birect"},
+		Error:            ErrorFn,
+		CheckOrigin:      CheckOrigin,
 	}
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		wsConn, err := upgrader.Upgrade(w, r, nil)

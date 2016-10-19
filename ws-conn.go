@@ -76,6 +76,8 @@ func init() {
 }
 
 func newConn(httpRequest *http.Request, wsConn *websocket.Conn, eventHandler EventHandler) *Conn {
+	// Send pings to peer with this period. Must be less than PongWait.
+	pingPeriod := (PongWait * 7) / 10
 	conn := &Conn{
 		HTTPRequest:  httpRequest,
 		wsConn:       wsConn,

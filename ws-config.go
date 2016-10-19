@@ -32,12 +32,6 @@ var (
 	// connection before SendText and SendBinary starts dropping messages and
 	// return ErrorSendFullBuffer.
 	ConnMaxSendBufferLen = 64
-
-	// Internal
-	///////////
-
-	// Send pings to peer with this period. Must be less than PongWait.
-	pingPeriod time.Duration
 )
 
 var (
