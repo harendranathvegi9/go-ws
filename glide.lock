@@ -1,12 +1,8 @@
-hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2016-01-10T08:32:40.032282627-05:00
+hash: 3d6674ae319f6a199ab0da46fd64f80fd08d38d32667d2c0758e76eede354fb0
+updated: 2016-10-19T17:43:28.316748317-04:00
 imports:
 - name: github.com/gorilla/websocket
-  version: 3986be78bf859e01f01af631ad76da5b269d270c
-- name: log
-  version: ""
-- name: net/http
-  version: ""
-- name: time
-  version: ""
-devImports: []
+  version: 1f512fc3f05332ba7117626cdfb4e07474e58e60
+- name: github.com/marcuswestin/go-errs
+  version: 3dc902940ead2b759093e963725e30c37e286244
+testImports: []
