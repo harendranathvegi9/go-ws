@@ -1,7 +1,10 @@
 # Testing
 #########
 
-test: lint vet
+test: lint vet run-tests
+ci-test: vet run-tests
+
+run-tests:
 	go test --race -v .
 lint:
 	golint .
