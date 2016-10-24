@@ -1,8 +1,8 @@
 hash: 3d6674ae319f6a199ab0da46fd64f80fd08d38d32667d2c0758e76eede354fb0
-updated: 2016-10-19T17:43:28.316748317-04:00
+updated: 2016-10-24T17:33:28.58649757-04:00
 imports:
 - name: github.com/gorilla/websocket
   version: 1f512fc3f05332ba7117626cdfb4e07474e58e60
 - name: github.com/marcuswestin/go-errs
-  version: 3dc902940ead2b759093e963725e30c37e286244
+  version: 5040c24e16df7c994407cacc6c8d1d4c29261762
 testImports: []
