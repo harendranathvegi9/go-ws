@@ -39,6 +39,10 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		CheckOrigin:      CheckOrigin,
 	}
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		if version := r.Header.Get("Sec-Websocket-Version"); version != "13" {
+			http.Error(w, "Sec-Websocket-Version must be 13", 400)
+			return
+		}
 		wsConn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			_checkAndGenerateEvent(eventHandler, Error, nil, nil, err)
