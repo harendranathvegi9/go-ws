@@ -1,8 +1,8 @@
 # Testing
 #########
 
+test-ci: test
 test: lint vet run-tests
-ci-test: vet run-tests
 
 run-tests:
 	go test -v .
