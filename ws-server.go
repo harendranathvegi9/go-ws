@@ -26,10 +26,18 @@ var (
 	ErrorFn func(w http.ResponseWriter, r *http.Request, status int, reason error)
 )
 
-// UpgradeRequests will upgrade any incoming websocket request
+// UpgradeRequests will start upgrading any http requests matching
+// the given pattern. Calling it is equivalent to calling
+// http.HandleFunc(pattern, birect.UpgradeHandlerFunc(eventHandler))
+func UpgradeRequests(pattern string, eventHandler EventHandler) {
+	http.HandleFunc(pattern, UpgradeHandlerFunc(eventHandler))
+}
+
+// UpgradeHandlerFunc returns a http.HandlerFunc which will upgrade
+// any incoming http websocket upgrade requests to websocket connections
 // matching the given pattern, and then call the event handler
 // function with connection events.
-func UpgradeRequests(pattern string, eventHandler EventHandler) {
+func UpgradeHandlerFunc(eventHandler EventHandler) http.HandlerFunc {
 	upgrader := websocket.Upgrader{
 		HandshakeTimeout: HandshakeTimeout,
 		ReadBufferSize:   ReadBufferSize,
@@ -38,7 +46,7 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		Error:            ErrorFn,
 		CheckOrigin:      CheckOrigin,
 	}
-	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if version := r.Header.Get("Sec-Websocket-Version"); version != "13" {
 			http.Error(w, "Sec-Websocket-Version must be 13", 400)
 			return
@@ -51,6 +59,5 @@ func UpgradeRequests(pattern string, eventHandler EventHandler) {
 		} else {
 			newConn(r, wsConn, eventHandler)
 		}
-	})
-	return
+	}
 }
